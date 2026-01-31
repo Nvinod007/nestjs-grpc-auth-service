@@ -35,7 +35,7 @@ export class AuthService {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    this.users.set(email, user);
+
     try {
       const hashedPassword = await bcrypt.hash(password, 10);
       this.passwords.set(email, hashedPassword);
@@ -48,6 +48,7 @@ export class AuthService {
         refreshToken: '',
       };
     }
+    this.users.set(email, user);
 
     return {
       success: true,
