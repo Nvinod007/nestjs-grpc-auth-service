@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 
 export type ReturnableUser = Prisma.UserGetPayload<{
   select: {
@@ -59,3 +59,35 @@ export interface RefreshTokenResponse {
   accessToken: string;
   refreshToken: string;
 }
+
+export interface UserRequest {
+  id: string;
+}
+
+export interface UserResponse {
+  user?: ReturnableUser;
+  message: string;
+}
+
+export interface UpdateUserRequest {
+  id: string;
+  name?: string;
+  email?: string;
+  role?: Role;
+  isActive?: boolean;
+}
+
+export interface UpdateUserResponse {
+  success: boolean;
+  message: string;
+  user?: ReturnableUser;
+}
+
+export type DeleteUserRequest = {
+  id: string;
+};
+
+export type DeleteUserResponse = {
+  success: boolean;
+  message: string;
+};

@@ -19,3 +19,13 @@ export function toUserForToken(user: ReturnableUser): UserForToken {
     email: user.email,
   };
 }
+
+export function removeUndefined<T extends Record<string, unknown>>(
+  obj: T,
+): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(
+      ([key, value]) => value !== undefined && key !== 'id',
+    ),
+  ) as Partial<T>;
+}
