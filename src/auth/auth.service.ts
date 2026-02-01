@@ -6,24 +6,45 @@ import {
   RefreshTokenResponse,
   RegisterRequest,
   RegisterResponse,
-  User,
+  ReturnableUser,
+  UserForToken,
   VerifyTokenRequest,
   VerifyTokenResponse,
 } from './types';
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcrypt';
+import { PrismaService } from 'src/prisma/prisma.service';
+import {
+  returnableUserSelect,
+  toUserForToken,
+  userWithPasswordSelect,
+} from './auth.helpers';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly jwtService: JwtService) {}
-  private readonly users = new Map<string, User>();
-  private readonly passwords = new Map<string, string>();
-  private userIdCounter = 1;
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  private generateTokens(user: ReturnableUser) {
+    const userForToken = toUserForToken(user);
+    return {
+      accessToken: this.generateAccessToken(userForToken),
+      refreshToken: this.generateRefreshToken(userForToken),
+    };
+  }
 
   async register(data: RegisterRequest): Promise<RegisterResponse> {
     const { email, password, name } = data;
 
-    if (this.users.has(email)) {
+    const isUserExists = await this.prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
+
+    if (isUserExists) {
       return {
         success: false,
         message: 'User already exists',
@@ -31,42 +52,37 @@ export class AuthService {
         refreshToken: '',
       };
     }
-    const userId = this.userIdCounter++;
-    const user: User = {
-      id: userId.toString(),
-      email,
-      name: name ?? '',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    try {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      this.passwords.set(email, hashedPassword);
-    } catch (error) {
-      console.error(error);
-      return {
-        success: false,
-        message: 'Failed to register user',
-        accessToken: '',
-        refreshToken: '',
-      };
-    }
-    this.users.set(email, user);
+    const returnableUser: ReturnableUser = await this.prisma.user.create({
+      data: {
+        email,
+        name: name ?? '',
+        password: hashedPassword,
+        role: 'USER',
+        isActive: true,
+      },
+      select: returnableUserSelect,
+    });
 
+    const tokens = this.generateTokens(returnableUser);
     return {
       success: true,
       message: 'User registered successfully',
-      user,
-      accessToken: this.generateAccessToken(user),
-      refreshToken: this.generateRefreshToken(user),
+      user: returnableUser,
+      ...tokens,
     };
   }
 
   async login(data: LoginRequest): Promise<LoginResponse> {
     const { email, password } = data;
-    const user = this.users.get(email);
-    if (!user) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email,
+      },
+      select: userWithPasswordSelect,
+    });
+    if (!user?.id) {
       return {
         success: false,
         message: 'User not found',
@@ -74,16 +90,7 @@ export class AuthService {
         refreshToken: '',
       };
     }
-    const hashedPassword = this.passwords.get(email);
-    if (!hashedPassword) {
-      return {
-        success: false,
-        message: 'User not found',
-        accessToken: '',
-        refreshToken: '',
-      };
-    }
-    const isPasswordValid = await bcrypt.compare(password, hashedPassword);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return {
         success: false,
@@ -92,22 +99,34 @@ export class AuthService {
         refreshToken: '',
       };
     }
+
+    const returnableUser: ReturnableUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      isActive: user.isActive,
+    };
+
+    const tokens = this.generateTokens(returnableUser);
     return {
       success: true,
       message: 'Login successful',
-      user,
-      accessToken: this.generateAccessToken(user),
-      refreshToken: this.generateRefreshToken(user),
+      user: returnableUser,
+      ...tokens,
     };
   }
 
-  private generateAccessToken(user: User): string {
-    return this.jwtService.sign({ userId: user.id, email: user.email });
+  private generateAccessToken(user: UserForToken): string {
+    return this.jwtService.sign({
+      userId: user.id ?? '',
+      email: user.email ?? '',
+    });
   }
 
-  private generateRefreshToken(user: User): string {
+  private generateRefreshToken(user: UserForToken): string {
     return this.jwtService.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id ?? '', email: user.email ?? '' },
       { expiresIn: '30d' },
     );
   }
@@ -115,11 +134,16 @@ export class AuthService {
   async verifyToken(data: VerifyTokenRequest): Promise<VerifyTokenResponse> {
     try {
       const decoded: any = await this.jwtService.verifyAsync(data.token);
-      if (!decoded || !decoded?.email) {
+      if (!decoded?.email) {
         throw new Error('Invalid token');
       }
-      const user = this.users.get(decoded.email);
-      if (!user) {
+      const user = await this.prisma.user.findUnique({
+        where: {
+          email: decoded.email,
+        },
+        select: returnableUserSelect,
+      });
+      if (!user?.id) {
         throw new Error('User not found');
       }
       return {
@@ -141,18 +165,24 @@ export class AuthService {
   async refreshToken(data: RefreshTokenRequest): Promise<RefreshTokenResponse> {
     try {
       const decoded: any = await this.jwtService.verifyAsync(data.refreshToken);
-      if (!decoded || !decoded?.email) {
+      if (!decoded?.email) {
         throw new Error('Invalid refresh token');
       }
-      const user = this.users.get(decoded?.email);
-      if (!user) {
+
+      const user = await this.prisma.user.findUnique({
+        where: {
+          email: decoded.email,
+        },
+        select: returnableUserSelect,
+      });
+      if (!user?.id) {
         throw new Error('User not found');
       }
+      const tokens = this.generateTokens(user);
       return {
         success: true,
         message: 'Token refreshed successfully',
-        accessToken: this.generateAccessToken(user),
-        refreshToken: this.generateRefreshToken(user),
+        ...tokens,
       };
     } catch (error) {
       console.error(error);

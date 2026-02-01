@@ -1,14 +1,16 @@
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  createdAt: number;
-  updatedAt: number;
-}
+import { Prisma } from '@prisma/client';
 
-export interface InternalUser extends User {
-  password: string;
-}
+export type ReturnableUser = Prisma.UserGetPayload<{
+  select: {
+    id: true;
+    email: true;
+    name: true;
+    role: true;
+    isActive: true;
+  };
+}>;
+
+export type UserForToken = Pick<ReturnableUser, 'id' | 'email'>;
 
 export interface RegisterRequest {
   email: string;
@@ -19,7 +21,7 @@ export interface RegisterRequest {
 export interface RegisterResponse {
   success: boolean;
   message: string;
-  user?: User;
+  user?: ReturnableUser;
   accessToken: string;
   refreshToken: string;
 }
@@ -32,7 +34,7 @@ export interface LoginRequest {
 export interface LoginResponse {
   success: boolean;
   message: string;
-  user?: User;
+  user?: ReturnableUser;
   accessToken: string;
   refreshToken: string;
 }
@@ -43,7 +45,7 @@ export interface VerifyTokenRequest {
 
 export interface VerifyTokenResponse {
   valid: boolean;
-  user?: User;
+  user?: ReturnableUser;
   message: string;
 }
 
