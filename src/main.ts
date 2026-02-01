@@ -16,6 +16,7 @@ async function bootstrap() {
       },
     },
   );
+
   await grpcApp.listen();
   console.log(' 🚀 Auth service is running on port 50051');
 }

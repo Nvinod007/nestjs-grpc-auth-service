@@ -10,6 +10,12 @@ import {
   RefreshTokenResponse,
   type RegisterRequest,
   RegisterResponse,
+  type ChangePasswordRequest,
+  ChangePasswordResponse,
+  type RequestPasswordResetRequest,
+  RequestPasswordResetResponse,
+  type ResetPasswordRequest,
+  ResetPasswordResponse,
   type UpdateUserRequest,
   UpdateUserResponse,
   type UserRequest,
@@ -55,5 +61,26 @@ export class AuthController {
   @GrpcMethod('AuthService', 'DeleteUser')
   async deleteUser(data: DeleteUserRequest): Promise<DeleteUserResponse> {
     return this.authService.deleteUser(data);
+  }
+
+  @GrpcMethod('AuthService', 'RequestPasswordReset')
+  async requestPasswordReset(
+    data: RequestPasswordResetRequest,
+  ): Promise<RequestPasswordResetResponse> {
+    return this.authService.requestPasswordReset(data);
+  }
+
+  @GrpcMethod('AuthService', 'ResetPassword')
+  async resetPassword(
+    data: ResetPasswordRequest,
+  ): Promise<ResetPasswordResponse> {
+    return this.authService.resetPassword(data);
+  }
+
+  @GrpcMethod('AuthService', 'ChangePassword')
+  async changePassword(
+    data: ChangePasswordRequest,
+  ): Promise<ChangePasswordResponse> {
+    return this.authService.changePassword(data);
   }
 }
