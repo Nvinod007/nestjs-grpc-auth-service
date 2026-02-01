@@ -2,10 +2,14 @@ import { Controller } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { GrpcMethod } from '@nestjs/microservices';
 import {
-  type LoginResponse,
   type LoginRequest,
+  LoginResponse,
+  type RefreshTokenRequest,
+  RefreshTokenResponse,
   type RegisterRequest,
-  type RegisterResponse,
+  RegisterResponse,
+  type VerifyTokenRequest,
+  VerifyTokenResponse,
 } from './types';
 
 @Controller()
@@ -20,5 +24,15 @@ export class AuthController {
   @GrpcMethod('AuthService', 'Login')
   async login(data: LoginRequest): Promise<LoginResponse> {
     return this.authService.login(data);
+  }
+
+  @GrpcMethod('AuthService', 'VerifyToken')
+  async verifyToken(data: VerifyTokenRequest): Promise<VerifyTokenResponse> {
+    return this.authService.verifyToken(data);
+  }
+
+  @GrpcMethod('AuthService', 'RefreshToken')
+  async refreshToken(data: RefreshTokenRequest): Promise<RefreshTokenResponse> {
+    return this.authService.refreshToken(data);
   }
 }

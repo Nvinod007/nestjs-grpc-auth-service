@@ -2,9 +2,13 @@ import { Injectable } from '@nestjs/common';
 import {
   LoginRequest,
   LoginResponse,
+  RefreshTokenRequest,
+  RefreshTokenResponse,
   RegisterRequest,
   RegisterResponse,
   User,
+  VerifyTokenRequest,
+  VerifyTokenResponse,
 } from './types';
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcrypt';
@@ -98,10 +102,66 @@ export class AuthService {
   }
 
   private generateAccessToken(user: User): string {
-    return this.jwtService.sign({ userId: user.id });
+    return this.jwtService.sign({ userId: user.id, email: user.email });
   }
 
   private generateRefreshToken(user: User): string {
-    return this.jwtService.sign({ userId: user.id }, { expiresIn: '30d' });
+    return this.jwtService.sign(
+      { userId: user.id, email: user.email },
+      { expiresIn: '30d' },
+    );
+  }
+
+  async verifyToken(data: VerifyTokenRequest): Promise<VerifyTokenResponse> {
+    try {
+      const decoded: any = await this.jwtService.verifyAsync(data.token);
+      if (!decoded || !decoded?.email) {
+        throw new Error('Invalid token');
+      }
+      const user = this.users.get(decoded.email);
+      if (!user) {
+        throw new Error('User not found');
+      }
+      return {
+        valid: true,
+        user,
+        message: 'Token verified successfully',
+      };
+    } catch (error) {
+      console.error(error);
+      return {
+        valid: false,
+        user: undefined,
+        message: 'Invalid token',
+      };
+    }
+  }
+
+  // TODO: implement refresh token invalidation while supporting multi device logins.
+  async refreshToken(data: RefreshTokenRequest): Promise<RefreshTokenResponse> {
+    try {
+      const decoded: any = await this.jwtService.verifyAsync(data.refreshToken);
+      if (!decoded || !decoded?.email) {
+        throw new Error('Invalid refresh token');
+      }
+      const user = this.users.get(decoded?.email);
+      if (!user) {
+        throw new Error('User not found');
+      }
+      return {
+        success: true,
+        message: 'Token refreshed successfully',
+        accessToken: this.generateAccessToken(user),
+        refreshToken: this.generateRefreshToken(user),
+      };
+    } catch (error) {
+      console.error(error);
+      return {
+        success: false,
+        message: 'Invalid refresh token',
+        accessToken: '',
+        refreshToken: '',
+      };
+    }
   }
 }
