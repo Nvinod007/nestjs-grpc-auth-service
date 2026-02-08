@@ -69,6 +69,12 @@ export interface UserResponse {
   message: string;
 }
 
+export type GetUsersRequest = Record<string, never>;
+
+export interface GetUsersResponse {
+  users: ReturnableUser[];
+}
+
 export interface UpdateUserRequest {
   id: string;
   name?: string;

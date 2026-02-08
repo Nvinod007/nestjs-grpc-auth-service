@@ -20,6 +20,8 @@ import {
   UpdateUserResponse,
   type UserRequest,
   UserResponse,
+  type GetUsersRequest,
+  GetUsersResponse,
   type VerifyTokenRequest,
   VerifyTokenResponse,
 } from './types';
@@ -51,6 +53,12 @@ export class AuthController {
   @GrpcMethod('AuthService', 'GetUser')
   async getUser(data: UserRequest): Promise<UserResponse> {
     return this.authService.getUser(data);
+  }
+
+  @GrpcMethod('AuthService', 'GetUsers')
+  async getUsers(_data: GetUsersRequest): Promise<GetUsersResponse> {
+    const users = await this.authService.getUsers();
+    return { users };
   }
 
   @GrpcMethod('AuthService', 'UpdateUser')

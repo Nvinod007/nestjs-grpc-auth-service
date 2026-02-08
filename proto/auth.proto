@@ -9,6 +9,7 @@ service AuthService {
   rpc VerifyToken(VerifyTokenRequest) returns (VerifyTokenResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
   rpc GetUser(UserRequest) returns (UserResponse);
+  rpc GetUsers(GetUsersRequest) returns (GetUsersResponse);
   rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
   rpc RequestPasswordReset(RequestPasswordResetRequest) returns (RequestPasswordResetResponse);
@@ -23,6 +24,14 @@ message UserRequest {
 message UserResponse {
   optional User user = 1;
   string message = 2;
+}
+
+message GetUsersRequest {
+  // Empty - no parameters needed to fetch all users
+}
+
+message GetUsersResponse {
+  repeated User users = 1;
 }
 
 message UpdateUserRequest {
@@ -108,6 +117,8 @@ message User {
   string name = 3;
   int64 createdAt = 4;   
   int64 updatedAt = 5;
+  Role role = 6;
+  bool isActive = 7;
 }
 
 message RequestPasswordResetRequest {

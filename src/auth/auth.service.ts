@@ -271,7 +271,7 @@ export class AuthService {
     }
   }
 
-  async getUsers(): Promise<UserResponse[]> {
+  async getUsers(): Promise<ReturnableUser[]> {
     this.logger.log('Fetching all active users');
     const users = await this.prisma.user.findMany({
       select: returnableUserSelect,
@@ -281,12 +281,7 @@ export class AuthService {
     });
 
     this.logger.log(`Fetched ${users.length} active users`);
-    const responses: UserResponse[] = users.map((user) => ({
-      user,
-      message: 'User fetched successfully',
-    }));
-
-    return responses;
+    return users;
   }
 
   async getUser(data: UserRequest): Promise<UserResponse> {
