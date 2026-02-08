@@ -1,28 +1,30 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
-  DeleteUserRequest,
   DeleteUserResponse,
-  LoginRequest,
   LoginResponse,
-  RefreshTokenRequest,
   RefreshTokenResponse,
-  RegisterRequest,
   RegisterResponse,
-  ChangePasswordRequest,
   ChangePasswordResponse,
-  RequestPasswordResetRequest,
   RequestPasswordResetResponse,
-  ResetPasswordRequest,
   ResetPasswordResponse,
   ReturnableUser,
-  UpdateUserRequest,
   UpdateUserResponse,
   UserForToken,
-  UserRequest,
   UserResponse,
-  VerifyTokenRequest,
   VerifyTokenResponse,
 } from './types';
+import {
+  RegisterRequestDto,
+  LoginRequestDto,
+  VerifyTokenRequestDto,
+  RefreshTokenRequestDto,
+  UserRequestDto,
+  UpdateUserRequestDto,
+  DeleteUserRequestDto,
+  RequestPasswordResetRequestDto,
+  ResetPasswordRequestDto,
+  ChangePasswordRequestDto,
+} from './dto';
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcrypt';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -42,7 +44,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async register(data: RegisterRequest): Promise<RegisterResponse> {
+  async register(data: RegisterRequestDto): Promise<RegisterResponse> {
     this.logger.log(`Register attempt for email: ${data.email}`);
     const { email, password, name } = data;
 
@@ -108,7 +110,7 @@ export class AuthService {
     };
   }
 
-  async login(data: LoginRequest): Promise<LoginResponse> {
+  async login(data: LoginRequestDto): Promise<LoginResponse> {
     this.logger.log(`Login attempt for email: ${data.email}`);
     const { email, password } = data;
     const user = await this.prisma.user.findUnique({
@@ -167,7 +169,7 @@ export class AuthService {
     };
   }
 
-  async verifyToken(data: VerifyTokenRequest): Promise<VerifyTokenResponse> {
+  async verifyToken(data: VerifyTokenRequestDto): Promise<VerifyTokenResponse> {
     this.logger.log('Token verification attempt');
     try {
       const decoded: any = await this.jwtService.verifyAsync(data.token);
@@ -218,7 +220,9 @@ export class AuthService {
   }
 
   // TODO: implement refresh token invalidation while supporting multi device logins.
-  async refreshToken(data: RefreshTokenRequest): Promise<RefreshTokenResponse> {
+  async refreshToken(
+    data: RefreshTokenRequestDto,
+  ): Promise<RefreshTokenResponse> {
     this.logger.log('Token refresh attempt');
     try {
       const decoded: any = await this.jwtService.verifyAsync(data.refreshToken);
@@ -284,7 +288,7 @@ export class AuthService {
     return users;
   }
 
-  async getUser(data: UserRequest): Promise<UserResponse> {
+  async getUser(data: UserRequestDto): Promise<UserResponse> {
     this.logger.log(`GetUser request for ID: ${data.id}`);
     const user = await this.prisma.user.findUnique({
       where: {
@@ -317,7 +321,7 @@ export class AuthService {
     };
   }
 
-  async updateUser(data: UpdateUserRequest): Promise<UpdateUserResponse> {
+  async updateUser(data: UpdateUserRequestDto): Promise<UpdateUserResponse> {
     this.logger.log(`UpdateUser request for ID: ${data.id}`);
     const validationError = await this.validateUpdateRequest(data);
     if (validationError) {
@@ -337,7 +341,7 @@ export class AuthService {
     return this.performUpdate(data.id, updateData);
   }
 
-  async deleteUser(data: DeleteUserRequest): Promise<DeleteUserResponse> {
+  async deleteUser(data: DeleteUserRequestDto): Promise<DeleteUserResponse> {
     this.logger.log(`DeleteUser request for ID: ${data.id}`);
     try {
       // Soft delete: set isActive to false and record deletion time
@@ -366,7 +370,7 @@ export class AuthService {
   }
 
   private async validateUpdateRequest(
-    data: UpdateUserRequest,
+    data: UpdateUserRequestDto,
   ): Promise<UpdateUserResponse | null> {
     const existingUser = await this.prisma.user.findUnique({
       where: { id: data.id },
@@ -403,7 +407,7 @@ export class AuthService {
     return null;
   }
 
-  private buildUpdateData(data: UpdateUserRequest) {
+  private buildUpdateData(data: UpdateUserRequestDto) {
     const roleValue = this.convertRoleEnum(data.role);
     return removeUndefined({
       name: data.name,
@@ -490,7 +494,7 @@ export class AuthService {
   }
 
   async requestPasswordReset(
-    data: RequestPasswordResetRequest,
+    data: RequestPasswordResetRequestDto,
   ): Promise<RequestPasswordResetResponse> {
     this.logger.log(`Password reset request for email: ${data.email}`);
     const user = await this.prisma.user.findUnique({
@@ -539,7 +543,7 @@ export class AuthService {
   }
 
   async resetPassword(
-    data: ResetPasswordRequest,
+    data: ResetPasswordRequestDto,
   ): Promise<ResetPasswordResponse> {
     this.logger.log('Password reset attempt with token');
     try {
@@ -615,7 +619,7 @@ export class AuthService {
   }
 
   async changePassword(
-    data: ChangePasswordRequest,
+    data: ChangePasswordRequestDto,
   ): Promise<ChangePasswordResponse> {
     this.logger.log(`ChangePassword request for user ID: ${data.userId}`);
     // Find user
